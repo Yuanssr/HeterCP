@@ -4,7 +4,7 @@ OUT_LOG="$LOG_DIR/train.log"
 mkdir -p "$LOG_DIR"
 
 CUDA_VISIBLE_DEVICES=4,5,6,7 \
-python -u -m torch.distributed.launch --nproc_per_node=4 --use_env \
+torchrun --nproc_per_node=4 \
   opencood/tools/train_ddp.py -y None --model_dir "$LOG_DIR" \
   2>"$ERR_LOG" | tee "$OUT_LOG"
 
