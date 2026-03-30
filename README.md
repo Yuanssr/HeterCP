@@ -1,17 +1,4 @@
-# GenComm (**Gen**erative **Comm**unication)
-### [NeurIPS 2025] Pragmatic Heterogeneous Collaborative Perception via Generative Communication Mechanism
-[Junfei Zhou](https://jeffreychou777.github.io/), [Penglin Dai](https://itsgroups.github.io/)✉, [Quanmin Wei](https://github.com/fengxueguiren), [Bingyi Liu](http://cst.whut.edu.cn/xygk/szdw/201809/t20180911_876964.shtml), [Xiao Wu](https://faculty.swjtu.edu.cn/wuxiao1/zh_CN/index.htm), [Jianping Wang](https://scholars.cityu.edu.hk/en/persons/jianwang)
-
-
-[Homepage](https://jeffreychou777.github.io/GenComm/) | [ArXiv](https://arxiv.org/pdf/2510.19618) | [Poster](images/poster.png)
-
-
-This repository provides a unified and integrated multi-agent collaborative perception framework, extended from [**HEAL**](https://github.com/yifanlu0227/HEAL) to support heterogeneous settings across sensors, modalities, and models.
-Building on [**HEAL**](https://github.com/yifanlu0227/HEAL), we add support for additional features, datasets, and multiple heterogeneous collaboration methods.
-Explore this repository to discover the ultimate experience of heterogeneous collaboration.🌟
-
-
-![GenComm Teaser](images/intro.png)
+# a Repository for Heterogeneous Collaborative Perception
 
 ## Repo Features
 
@@ -341,18 +328,3 @@ We store our checkpoints files in [HEAL's Huggingface Hub](https://huggingface.c
 Update: Those checkpoints has a faulty input channel number for SECOND related models, but you can still run them with spconv 1.2.1 (because spconv 1.2.1 has no sanity check). The performance should degrade but it still looks reasonable. More discussion can be found in [Issue 20](https://github.com/yifanlu0227/HEAL/issues/20). 
 
 If you want to compare with HEAL's model and you use spconv 1.2.1, you can still load from the checkpoint. To develop your model, please do not use these checkpoints. -->
-
-## Citation
-```
-@article{zhou2025pragmatic,
-  title={Pragmatic Heterogeneous Collaborative Perception via Generative Communication Mechanism},
-  author={Zhou, Junfei and Dai, Penglin and Wei, Quanmin and Liu, Bingyi and Wu, Xiao and Wang, Jianping},
-  journal={arXiv preprint arXiv:2510.19618},
-  year={2025}
-}
-```
-
-## Acknowledge
-This repository is built upon the excellent foundations of [OpenCOOD](https://github.com/DerrickXuNu/OpenCOOD), [HEAL](https://github.com/yifanlu0227/HEAL), and [V2X-R](https://github.com/ylwhxht/V2X-R).
-We sincerely appreciate [@yifanlu0227](https://github.com/yifanlu0227), [@DerrickXuNu](https://github.com/DerrickXuNu) and [@ylwhxht](https://github.com/ylwhxht)
-for their outstanding contributions to the community.
