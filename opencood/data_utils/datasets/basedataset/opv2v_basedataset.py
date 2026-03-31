@@ -51,6 +51,7 @@ class OPV2VBaseDataset(Dataset):
         self.root_dir = root_dir 
         
         print("Dataset dir:", root_dir)
+        self.heter_dataset_flag = True if os.path.exists(root_dir.replace("OPV2V", "OPV2V_Hetero")) else False
 
         if 'train_params' not in params or \
                 'max_cav' not in params['train_params']:
@@ -227,7 +228,8 @@ class OPV2VBaseDataset(Dataset):
                                                 timestamp)
                     depth_files = self.find_camera_files(cav_path, 
                                                 timestamp, sensor="depth")
-                    depth_files = [depth_file.replace("OPV2V", "OPV2V_Hetero") for depth_file in depth_files]
+                    if self.heter_dataset_flag:
+                        depth_files = [depth_file.replace("OPV2V", "OPV2V_Hetero") for depth_file in depth_files]
 
                     self.scenario_database[i][cav_id][timestamp]['yaml'] = \
                         yaml_file
