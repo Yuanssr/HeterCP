@@ -29,7 +29,6 @@ def pcd_to_np(pcd_file):
 
     """
     pcd = o3d.io.read_point_cloud(pcd_file)
-
     xyz = np.asarray(pcd.points)
     # we save the intensity in the first channel
     intensity = np.expand_dims(np.asarray(pcd.colors)[:, 0], -1)

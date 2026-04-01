@@ -98,8 +98,7 @@ class OPV2VBaseDataset(Dataset):
         # first load all paths of different scenarios
         scenario_folders = sorted([os.path.join(root_dir, x)
                                    for x in os.listdir(root_dir) if
-                                   os.path.isdir(os.path.join(root_dir, x))])
-        
+                                   os.path.isdir(os.path.join(root_dir, x))])       
         self.scenario_folders = scenario_folders
         self.reinitialize()
         
@@ -252,7 +251,7 @@ class OPV2VBaseDataset(Dataset):
                         self.scenario_database[i][cav_id][timestamp]['modality_name'] = cav_modality
 
                         self.scenario_database[i][cav_id][timestamp]['lidar'] = \
-                            self.adaptor.switch_lidar_channels(cav_modality, lidar_file)
+                            self.adaptor.switch_lidar_channels(cav_modality, lidar_file, self.heter_dataset_flag)
 
 
                    # load extra data

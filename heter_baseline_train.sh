@@ -1,4 +1,4 @@
-LOG_DIR=opencood/logs/Baselines/stage1/OPV2V_m2_v2xvit
+LOG_DIR=opencood/logs/Baselines/stage1/OPV2V_m3_v2xvit
 ERR_LOG="$LOG_DIR/train.err"
 OUT_LOG="$LOG_DIR/train.log"
 mkdir -p "$LOG_DIR"

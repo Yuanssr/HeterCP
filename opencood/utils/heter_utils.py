@@ -94,14 +94,21 @@ class Adaptor:
         """
         return cav_modality not in self.model_modality_list
 
-    def switch_lidar_channels(self, cav_modality, lidar_file_path):
+    def switch_lidar_channels(self, cav_modality, lidar_file_path, heter_dataset_flag):
         """
         Currently only support OPV2V
         """
+
         if self.lidar_channels_dict.get(cav_modality, None) == 32:
-            return lidar_file_path.replace("OPV2V","OPV2V_Hetero").replace(".pcd", "_32.pcd")
+            if not heter_dataset_flag:
+                return lidar_file_path.replace(".pcd", "_32.pcd")
+            else:
+                return lidar_file_path.replace("OPV2V","OPV2V_Hetero").replace(".pcd", "_32.pcd")
         if self.lidar_channels_dict.get(cav_modality, None) == 16:
-            return lidar_file_path.replace("OPV2V","OPV2V_Hetero").replace(".pcd", "_16.pcd")
+            if not heter_dataset_flag:
+                return lidar_file_path.replace(".pcd", "_16.pcd")
+            else:
+                return lidar_file_path.replace("OPV2V","OPV2V_Hetero").replace(".pcd", "_16.pcd")
         return lidar_file_path
 
 
