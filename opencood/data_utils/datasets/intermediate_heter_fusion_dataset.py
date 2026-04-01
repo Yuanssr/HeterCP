@@ -570,6 +570,7 @@ def getIntermediateheterFusionDataset(cls):
             return selected_cav_processed
 
         def collate_batch_train(self, batch):
+
             # Intermediate fusion is different the other two
             output_dict = {'ego': {}}
 

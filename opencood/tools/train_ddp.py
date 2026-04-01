@@ -15,7 +15,6 @@ from opencood.tools import train_utils
 from opencood.data_utils.datasets import build_dataset
 from opencood.tools import multi_gpu_utils
 from icecream import ic
-import tqdm
 import sys
 import warnings
 
@@ -209,18 +208,19 @@ def main():
         except:
             print("No model_train_init function")
 
-        # progress bar per epoch (only rank 0 prints)
-        disable_bar = True
-        train_pbar = tqdm.tqdm(train_loader,
-                       desc=f"Train {epoch}/{epoches}",
-                       leave=True,
-                       disable=disable_bar)
-
         train_ave_loss = []
-        for i, batch_data in enumerate(train_pbar):
+        for i, batch_data in enumerate(train_loader):
             iter += 1
+            # 判断本地 batch 是否有效
+            is_valid = batch_data is not None and batch_data['ego']['object_bbx_mask'].sum() > 0
 
-            if batch_data is None or batch_data['ego']['object_bbx_mask'].sum() == 0:
+            # 分布式同步：只要有一个 rank 无效，所有 rank 都 skip
+            if opt.distributed:
+                is_valid_tensor = torch.tensor([int(is_valid)], device=device)
+                dist.all_reduce(is_valid_tensor, op=dist.ReduceOp.MIN)
+                is_valid = bool(is_valid_tensor.item())
+
+            if not is_valid:
                 continue
 
             model.zero_grad()
@@ -283,7 +283,13 @@ def main():
 
             with torch.no_grad():
                 for i, batch_data in enumerate(val_loader):
-                    if batch_data is None:
+                    # 判断本地 batch 是否有效
+                    is_valid = batch_data is not None
+                    if opt.distributed:
+                        is_valid_tensor = torch.tensor([int(is_valid)], device=device)
+                        dist.all_reduce(is_valid_tensor, op=dist.ReduceOp.MIN)
+                        is_valid = bool(is_valid_tensor.item())
+                    if not is_valid:
                         continue
                     model.zero_grad()
                     optimizer.zero_grad()
