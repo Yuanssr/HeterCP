@@ -912,7 +912,7 @@ class VoxelPostprocessor(BasePostprocessor):
         unprojected_box3d_tensor = torch.vstack(unprojected_box3d_list)
         unprojected_box3d_tensor = unprojected_box3d_tensor[keep_index]
         # nms
-        keep_index = box_utils.nms_rotated(pred_box3d_tensor,
+        keep_index = box_utils.nms_rotated_mmcv(pred_box3d_tensor,
                                            scores,
                                            self.params['nms_thresh']
                                            )

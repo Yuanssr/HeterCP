@@ -100,7 +100,7 @@ class PyramidWindowAttention(nn.Module):
                                                   ws,
                                                   relative_pos_embedding))
         self.fuse_mehod = fuse_method
-        if fuse_method == 'split_attn':
+        if fuse_method == 'split_attn256':
             self.split_attn = SplitAttn(256)
         elif fuse_method == 'split_attn128':
             self.split_attn = SplitAttn(128)

@@ -1,14 +1,18 @@
-LOG_DIR=opencood/logs/Baselines/stage1/OPV2V_m3_v2xvit
+LOG_DIR=opencood/logs/Baselines/stage1/V2XREAL_m1_v2xvit
 ERR_LOG="$LOG_DIR/train.err"
 OUT_LOG="$LOG_DIR/train.log"
 mkdir -p "$LOG_DIR"
 
-CUDA_VISIBLE_DEVICES=4,5,6,7 \
+CUDA_VISIBLE_DEVICES=4,5,6,7 PYTHONUNBUFFERED=1 \
 torchrun --nproc_per_node=4 \
   opencood/tools/train_ddp.py -y None --model_dir "$LOG_DIR" \
   2>"$ERR_LOG" | tee "$OUT_LOG"
 
+#CUDA_VISIBLE_DEVICES=4  \
+#python -u opencood/tools/train.py -y None --model_dir "$LOG_DIR" \
+  #2>"$ERR_LOG" | tee "$OUT_LOG"
 
+## BackAlign & STAMP style
 ## CodeFilling & MPDA style
 #mkdir opencood/logs/Baselines/stage2
 #mkdir opencood/logs/Baselines/stage2/MPDA

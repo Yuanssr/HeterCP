@@ -574,3 +574,112 @@ class Who2comFusion(nn.Module):
         out = torch.concat(out, dim=0)
         
         return out
+
+class HeterModalFusion(nn.Module):
+    """
+    Heterogeneous multi-agent feature fusion skeleton.
+    Input:
+        x: (sum(n_cav), C, H, W)
+        record_len: (B,)
+        affine_matrix: (B, L, L, 2, 3)
+    Output:
+        fused_feature: (B, C, H, W)
+    """
+    def __init__(self, args):
+        super().__init__()
+        self.in_channels = args["in_channels"]
+        self.embed_dim = args.get("embed_dim", self.in_channels)
+        self.modalities = args.get("modalities", ["lidar", "camera"])
+        self.num_modalities = len(self.modalities)
+
+        # 1) modality-specific projection (异构入口)
+        self.modality_proj = nn.ModuleDict({
+            m: nn.Sequential(
+                nn.Conv2d(self.in_channels, self.embed_dim, kernel_size=1, bias=False),
+                nn.BatchNorm2d(self.embed_dim),
+                nn.ReLU(inplace=True),
+            ) for m in self.modalities
+        })
+
+        # 2) shared projection / fallback
+        self.shared_proj = nn.Conv2d(self.in_channels, self.embed_dim, kernel_size=1, bias=False)
+
+        # 3) modality embedding (给后续 attention 或 gating 用)
+        self.modality_embedding = nn.Embedding(self.num_modalities, self.embed_dim)
+
+        # 4) simple hetero fusion core (先给框架，后续可替换成 transformer/hg attention)
+        self.query = nn.Conv2d(self.embed_dim, self.embed_dim, 1, bias=False)
+        self.key = nn.Conv2d(self.embed_dim, self.embed_dim, 1, bias=False)
+        self.value = nn.Conv2d(self.embed_dim, self.embed_dim, 1, bias=False)
+
+        # 5) output projection，保证输出通道与原模型兼容
+        self.out_proj = nn.Conv2d(self.embed_dim, self.in_channels, kernel_size=1, bias=False)
+
+        # 6) 可选：通信掩码/门控
+        self.gate = nn.Sequential(
+            nn.Conv2d(self.embed_dim * 2, self.embed_dim, 1, bias=True),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(self.embed_dim, 1, 1, bias=True),
+            nn.Sigmoid(),
+        )
+
+    def _build_agent_modality_ids(self, record_len, device):
+        """
+        返回 (B, L) 的 modality id。
+        这里只给占位逻辑，后续建议从 batch metadata 注入真实 modality id。
+        """
+        B = len(record_len)
+        L = int(record_len.max().item())
+        modality_ids = torch.zeros(B, L, dtype=torch.long, device=device)
+        # TODO: 用真实数据替换，当前默认 0 表示 lidar
+        return modality_ids
+
+    def _apply_modality_projection(self, feat_b, modality_ids_b):
+        """
+        feat_b: (L, C, H, W)
+        modality_ids_b: (L,)
+        return: (L, D, H, W)
+        """
+        L = feat_b.shape[0]
+        out = []
+        for i in range(L):
+            m_id = int(modality_ids_b[i].item())
+            if m_id < self.num_modalities:
+                m_name = self.modalities[m_id]
+                out.append(self.modality_proj[m_name](feat_b[i:i+1]))
+            else:
+                out.append(self.shared_proj(feat_b[i:i+1]))
+        return torch.cat(out, dim=0)
+
+    def forward(self, x, record_len, affine_matrix):
+        _, C, H, W = x.shape
+        B, L = affine_matrix.shape[:2]
+
+        # 与现有类一致：先 regroup
+        regroup_feature, mask = Regroup(x, record_len, L)   # (B, L, C, H, W)
+        modality_ids = self._build_agent_modality_ids(record_len, x.device)  # (B, L)
+
+        fused_out = []
+        for b in range(B):
+            N = int(record_len[b].item())
+            ego = 0
+
+            # 1) 对齐到 ego 坐标系（与现有类一致）
+            aligned = warp_affine_simple(regroup_feature[b, :N], affine_matrix[b, ego, :N], (H, W))  # (N,C,H,W)
+
+            # 2) 异构投影
+            aligned_embed = self._apply_modality_projection(aligned, modality_ids[b, :N])  # (N,D,H,W)
+
+            # 3) 一个简化版 hetero 融合核心（后续可换成 HGTCavAttention / V2XTransformer）
+            ego_feat = aligned_embed[0:1].expand(N, -1, -1, -1)
+            gate_in = torch.cat([ego_feat, aligned_embed], dim=1)
+            weight = self.gate(gate_in)                       # (N,1,H,W)
+            weight = weight / (weight.sum(dim=0, keepdim=True) + 1e-6)
+
+            fused_embed = torch.sum(weight * aligned_embed, dim=0, keepdim=True)  # (1,D,H,W)
+
+            # 4) 输出回原通道
+            fused = self.out_proj(fused_embed).squeeze(0)     # (C,H,W)
+            fused_out.append(fused)
+
+        return torch.stack(fused_out, dim=0)                  # (B,C,H,W)

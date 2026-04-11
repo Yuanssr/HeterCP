@@ -354,9 +354,7 @@ def eval_final_results_v2xreal(result_stat, save_path, global_sort_detections=Tr
             ap, mrec, mpre = calculate_ap(result_stat[class_name], iou_threshold, global_sort_detections)
             dump_dict[class_name].update(
                                   {iou_threshold:
-                                       {"ap": ap,
-                                        "mrec": mrec,
-                                        "mpre": mpre
+                                       {"ap": ap
                                         }
                                    })
             print(f'{class_name}: AP@{iou_threshold} is {ap:.3f}', end=' ')

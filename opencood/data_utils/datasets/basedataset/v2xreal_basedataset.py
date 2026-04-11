@@ -104,7 +104,7 @@ class V2XREALBaseDataset(Dataset):
         if not self.train and self.dataset_mode != "v2v":
             self.scenario_folders = [scenario_folder for scenario_folder in
                                      self.scenario_folders if "2023-04-07" not in scenario_folder.split("/")[-1]]
-            print(self.scenario_folders)
+            #print(self.scenario_folders)
         self.reinitialize()
         
         #### noise_setting #### added by Junfei Zhou 25_5_13
@@ -181,25 +181,10 @@ class V2XREALBaseDataset(Dataset):
         count = 0
         # loop over all scenarios
         for (i, scenario_folder) in enumerate(self.scenario_folders):
-            # self.scenario_database.update({i: OrderedDict()})
-
-            # # at least 1 cav should show up
-            # if self.train:
-            #     cav_list = [x for x in os.listdir(scenario_folder)
-            #                 if os.path.isdir(
-            #             os.path.join(scenario_folder, x))]
-            #     # cav_list = sorted(cav_list)
-            #     random.shuffle(cav_list)
-            # else:
-            #     cav_list = sorted([x for x in os.listdir(scenario_folder)
-            #                        if os.path.isdir(
-            #             os.path.join(scenario_folder, x))])
-            # assert len(cav_list) > 0
             cav_list = sorted([x for x in os.listdir(scenario_folder)
                                if os.path.isdir(
                     os.path.join(scenario_folder, x))])
 
- 
             if self.train:
                 random.shuffle(cav_list)
                 # hard coded to finetune model for specific collaboration modes
@@ -222,7 +207,7 @@ class V2XREALBaseDataset(Dataset):
             count += 1
             self.scenario_database.update({i: OrderedDict()})
             # at least 1 cav should show up
-            print(cav_list)
+            
             assert len(cav_list) > 0
             """
             roadside unit data's id is always negative, so here we want to
@@ -241,40 +226,51 @@ class V2XREALBaseDataset(Dataset):
                 scenario_name = scenario_folder.split("/")[-1]
                 cav_list = self.adaptor.reorder_cav_list(cav_list, scenario_name)
 
+            # 过滤掉 adaptor 可能强行引入的不存在的文件夹（比如 -1）
+            cav_list = [cav for cav in cav_list if os.path.isdir(os.path.join(scenario_folder, cav))]
+            
+            # 如果过滤之后变空了（说明 adaptor 没排对，或者只有一辆2却没有处理好），退回到仅包含原有的车辆
+            if len(cav_list) == 0:
+                cav_list = sorted([x for x in os.listdir(scenario_folder)
+                                   if os.path.isdir(os.path.join(scenario_folder, x))])
 
-            # loop over all CAV data
-            for (j, cav_id) in enumerate(cav_list):
-                if j > self.max_cav - 1:
-                    print('too many cavs reinitialize')
-                    break
-                self.scenario_database[i][cav_id] = OrderedDict()
+            cav_list = cav_list[:self.max_cav]
 
-                # save all yaml files to the dictionary
+            # find common timestamps across all cavs
+            common_timestamps = None
+            for j, cav_id in enumerate(cav_list):
                 cav_path = os.path.join(scenario_folder, cav_id)
-
-                yaml_files = \
-                    sorted([os.path.join(cav_path, x)
+                yaml_files = sorted([os.path.join(cav_path, x)
                             for x in os.listdir(cav_path) if
                             x.endswith('.yaml') and 'additional' not in x])
                 
-                # this timestamp is not ready
-                # yaml_files = [x for x in yaml_files if not ("2021_08_20_21_10_24" in x and "000265" in x)]
+                valid_timestamps = []
+                for f in yaml_files:
+                    bin_file = f.replace('.yaml', '.bin')
+                    # Check if both yaml and bin exist
+                    if os.path.exists(f) and os.path.exists(bin_file):
+                        timestamp = os.path.basename(f).replace('.yaml', '')
+                        valid_timestamps.append(timestamp)
+                
+                if common_timestamps is None:
+                    common_timestamps = set(valid_timestamps)
+                else:
+                    common_timestamps = common_timestamps.intersection(valid_timestamps)
+            
+            common_timestamps_list = sorted(list(common_timestamps)) if common_timestamps else []
 
-                timestamps = self.extract_timestamps(yaml_files)
+            # loop over all CAV data
+            for (j, cav_id) in enumerate(cav_list):
+                self.scenario_database[i][cav_id] = OrderedDict()
+                cav_path = os.path.join(scenario_folder, cav_id)
 
-                for timestamp in timestamps:
+                for timestamp in common_timestamps_list:
                     self.scenario_database[i][cav_id][timestamp] = \
                         OrderedDict()
                     yaml_file = os.path.join(cav_path,
                                              timestamp + '.yaml')
                     lidar_file = os.path.join(cav_path,
                                               timestamp + '.bin')
-                    ## TO-DO add camera
-                    # camera_files = self.find_camera_files(cav_path, 
-                    #                             timestamp)
-                    # depth_files = self.find_camera_files(cav_path, 
-                    #                             timestamp, sensor="depth")
-                    # depth_files = [depth_file.replace("OPV2V", "OPV2V_Hetero") for depth_file in depth_files]
 
                     self.scenario_database[i][cav_id][timestamp]['yaml'] = \
                         yaml_file
@@ -295,16 +291,6 @@ class V2XREALBaseDataset(Dataset):
                         self.scenario_database[i][cav_id][timestamp]['lidar'] = \
                             self.adaptor.switch_lidar_channels(cav_modality, lidar_file)
 
-
-                #    # load extra data
-                #     for file_extension in self.add_data_extension:
-                #         file_name = \
-                #             os.path.join(cav_path,
-                #                          timestamp + '_' + file_extension)
-
-                #         self.scenario_database[i][cav_id][timestamp][
-                #             file_extension] = file_name                  
-
                 # Assume all cavs will have the same timestamps length. Thus
                 # we only need to calculate for the first vehicle in the 
                 # scene.
@@ -312,13 +298,13 @@ class V2XREALBaseDataset(Dataset):
                     # we regard the agent with the minimum id as the ego
                     self.scenario_database[i][cav_id]['ego'] = True
                     if not self.len_record:
-                        self.len_record.append(len(timestamps))
+                        self.len_record.append(len(common_timestamps_list))
                     else:
                         prev_last = self.len_record[-1]
-                        self.len_record.append(prev_last + len(timestamps))
+                        self.len_record.append(prev_last + len(common_timestamps_list))
                 else:
                     self.scenario_database[i][cav_id]['ego'] = False
-        print("len:", self.len_record[-1])
+        print("len:", self.len_record[-1] if self.len_record else 0)
 
     def retrieve_base_data(self, idx):
         """

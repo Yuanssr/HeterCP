@@ -40,6 +40,8 @@ def test_parser():
     parser.add_argument('--no_score', action='store_true',
                         help="whether print the score of prediction")
     parser.add_argument('--note', default="", type=str, help="any other thing?")
+    parser.add_argument('--visualize_feature', action='store_true',
+                        help="whether visualize feature maps")
     opt = parser.parse_args()
     return opt
 
@@ -81,7 +83,7 @@ def main():
     hypes['validate_dir'] = hypes['test_dir']
     if "OPV2V" in hypes['test_dir'] or "v2xsim" in hypes['test_dir']:
         assert "test" in hypes['validate_dir']
-    
+    hypes['model']['args']['visualize_feature'] = opt.visualize_feature
     # This is used in visualization
     # left hand: OPV2V, V2XSet
     # right hand: V2X-Sim 2.0 and DAIR-V2X
@@ -231,24 +233,25 @@ def main():
                 if not os.path.exists(vis_save_path_root):
                     os.makedirs(vis_save_path_root)
 
-                # vis_save_path = os.path.join(vis_save_path_root, '3d_%05d.png' % i)
-                # simple_vis.visualize(infer_result,
-                #                     batch_data['ego'][
-                #                         'origin_lidar'][0],
-                #                     hypes['postprocess']['gt_range'],
-                #                     vis_save_path,
-                #                     method='3d',
-                #                     left_hand=left_hand)
-                 
-                vis_save_path = os.path.join(vis_save_path_root, 'bev_%05d.png' % i)
+                vis_bev_save_path_root = os.path.join(vis_save_path_root, 'bev')
+                if not os.path.exists(vis_bev_save_path_root):
+                    os.makedirs(vis_bev_save_path_root)
+                vis_bev_save_path = os.path.join(vis_bev_save_path_root, 'bev_%05d.png' % i)
                 simple_vis.visualize(infer_result,
                                     batch_data['ego'][
                                         'origin_lidar'][0],
                                     hypes['postprocess']['gt_range'],
-                                    vis_save_path,
+                                    vis_bev_save_path,
                                     method='bev',
                                     left_hand=left_hand,
                                     v2xreal_flag=True)
+                if opt.visualize_feature:
+                    vis_feature_save_path_root = os.path.join(vis_save_path_root, 'feature')
+                    if not os.path.exists(vis_feature_save_path_root):  
+                        os.makedirs(vis_feature_save_path_root)
+                    simple_vis.visualize_feature(infer_result,
+                                            i,
+                                            vis_feature_save_path_root)
         torch.cuda.empty_cache()
 
     # _, ap50, ap70 = eval_utils.eval_final_results(result_stat,
@@ -257,10 +260,10 @@ def main():
                                 opt.model_dir,
                                 global_sort_detections=True,
                                 infer_info=infer_info)
-    eval_utils.eval_final_results_v2xreal(result_stat,
-                                opt.model_dir,
-                                global_sort_detections=False,
-                                infer_info=infer_info)
+    #eval_utils.eval_final_results_v2xreal(result_stat,
+                                #opt.model_dir,
+                               # global_sort_detections=False,
+                              #  infer_info=infer_info)
 
 if __name__ == '__main__':
     main()

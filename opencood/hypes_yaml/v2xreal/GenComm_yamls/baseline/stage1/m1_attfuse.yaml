@@ -1,6 +1,6 @@
 name: V2XReal_Baselines_stage1_m1_att
 root_dir: "opencood/dataset/v2xreal/train"
-validate_dir: "opencood/dataset/v2xreal/test"
+validate_dir: "opencood/dataset/v2xreal/val"
 test_dir: "opencood/dataset/v2xreal/test"
 
 dataset_mode: "vc"

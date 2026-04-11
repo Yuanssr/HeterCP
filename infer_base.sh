@@ -3,6 +3,6 @@
  # opencood/logs/Baselines/stage1/OPV2V_m2_att \
  # opencood/logs/Baselines/stage1/OPV2V_m1_att \
   #opencood/logs/Baselines/stage2/direct_infer/OPV2V_m1m2_att
-CUDA_VISIBLE_DEVICES=0 python opencood/tools/inference.py --model_dir opencood/logs/Baselines/stage2/OPV2V_m1m2_v2xvit --visualize_feature
+CUDA_VISIBLE_DEVICES=0 python opencood/tools/inference_v2xreal.py --model_dir opencood/logs/Baselines/stage1/V2XREAL_m1_v2xvit --visualize_feature
 
 #CUDA_VISIBLE_DEVICES=6 python opencood/tools/inference.py --model_dir opencood/logs/Baselines/stage1/OPV2V_m1_att

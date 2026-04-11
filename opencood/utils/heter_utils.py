@@ -94,7 +94,7 @@ class Adaptor:
         """
         return cav_modality not in self.model_modality_list
 
-    def switch_lidar_channels(self, cav_modality, lidar_file_path, heter_dataset_flag):
+    def switch_lidar_channels(self, cav_modality, lidar_file_path, heter_dataset_flag = True):
         """
         Currently only support OPV2V
         """

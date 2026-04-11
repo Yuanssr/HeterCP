@@ -151,6 +151,9 @@ def inference_early_fusion(batch_data, model, dataset):
                     "gt_label_tensor" : gt_label_tensor}
     if "depth_items" in output_dict['ego']:
         return_dict.update({"depth_items" : output_dict['ego']['depth_items']})
+    if "heter_feature" in output_dict['ego'] and "fused_feature" in output_dict['ego']:
+        return_dict.update({"heter_feature" : output_dict['ego']['heter_feature']})
+        return_dict.update({"fused_feature" : output_dict['ego']['fused_feature']})
     return return_dict
 
 
