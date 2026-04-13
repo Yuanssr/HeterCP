@@ -1,16 +1,16 @@
-LOG_DIR=opencood/logs/Baselines/stage1/V2XREAL_m1_v2xvit
+LOG_DIR=opencood/logs/Baselines/stage2/STAMP/OPV2V_m0m1_v2xvit
 ERR_LOG="$LOG_DIR/train.err"
 OUT_LOG="$LOG_DIR/train.log"
 mkdir -p "$LOG_DIR"
 
-CUDA_VISIBLE_DEVICES=4,5,6,7 PYTHONUNBUFFERED=1 \
-torchrun --nproc_per_node=4 \
-  opencood/tools/train_ddp.py -y None --model_dir "$LOG_DIR" \
-  2>"$ERR_LOG" | tee "$OUT_LOG"
+#CUDA_VISIBLE_DEVICES=2,5,6,7 PYTHONUNBUFFERED=1 \
+#torchrun --nproc_per_node=4 \
+ # opencood/tools/train_ddp.py -y None --model_dir "$LOG_DIR" \
+ # 2>"$ERR_LOG" | tee "$OUT_LOG"
 
-#CUDA_VISIBLE_DEVICES=4  \
-#python -u opencood/tools/train.py -y None --model_dir "$LOG_DIR" \
-  #2>"$ERR_LOG" | tee "$OUT_LOG"
+CUDA_VISIBLE_DEVICES=7  \
+python -u opencood/tools/train_stamp.py -y None --model_dir "$LOG_DIR" \
+  2>"$ERR_LOG" | tee "$OUT_LOG"
 
 ## BackAlign & STAMP style
 ## CodeFilling & MPDA style
@@ -26,9 +26,9 @@ torchrun --nproc_per_node=4 \
 #cp opencood/hypes_yaml/opv2v/GenComm_yamls/baselines/stage2/STAMP/m0m1_att.yaml opencood/logs/Baselines/stage2/STAMP/OPV2V_m0m1_att
 
 #python opencood/tools/heal_tools.py merge_and_save \
- # opencood/logs/Baselines/stage1/OPV2V_m1_att \
- #opencood/logs/Baselines/stage1/OPV2V_m0_att \
- # opencood/logs/Baselines/stage2/STAMP/OPV2V_m0m1_att
+ # opencood/logs/Baselines/stage1/V2XREAL_m5_att \
+  #opencood/logs/Baselines/stage1/OPV2V_m1_att \
+  #opencood/logs/Baselines/stage2/OPV2V_m1_V2XREAL_m5_att
 
 
 # `python opencood/tools/heal_tools.py merge_and_save` will automatically search the best checkpoints for each folder and merge them together. The collaboration base's folder (m1 here) should be put in the second to last place, while the output folder should be put last.

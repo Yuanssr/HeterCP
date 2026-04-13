@@ -193,7 +193,7 @@ class HeterModelBaselineWCodebook(nn.Module):
 
         modality_count_dict = Counter(agent_modality_list)
         modality_feature_dict = {}
-        print(modality_count_dict)
+        
         for modality_name in self.modality_name_list:
             if modality_name not in modality_count_dict:
                 continue

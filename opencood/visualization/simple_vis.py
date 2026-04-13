@@ -173,7 +173,7 @@ def visualize(infer_result, pcd, pc_range, save_path, method='3d', left_hand=Fal
         plt.close()
 
 
-def visualize_feature(infer_result , index, save_path_root, channels = None):
+def visualize_feature(infer_result , index, save_path_root, channels = ''):
     """
     Visualize the feature maps.
 

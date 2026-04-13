@@ -341,10 +341,7 @@ def getLateheterFusionDataset(cls):
             object_bbx_mask = []
             label_dict_list = []
             origin_lidar = []
-            inputs_list_m1 = [] 
-            inputs_list_m2 = []
-            inputs_list_m3 = []
-            inputs_list_m4 = []
+            inputs_dict = {m: [] for m in self.modality_name_list}
             for i in range(len(batch)):
                 ego_dict = batch[i]['ego']
                 object_bbx_center.append(ego_dict['object_bbx_center'])
@@ -382,15 +379,15 @@ def getLateheterFusionDataset(cls):
                 for i in range(len(batch)):
                     ego_dict = batch[i]['ego']
                     if f'processed_features_{modality_name}' in ego_dict:
-                        eval(f"inputs_list_{modality_name}").append(ego_dict[f'processed_features_{modality_name}']) 
+                        inputs_dict[modality_name].append(ego_dict[f'processed_features_{modality_name}']) 
                     elif f'image_inputs_{modality_name}' in ego_dict:
-                        eval(f"inputs_list_{modality_name}").append(ego_dict[f'image_inputs_{modality_name}']) 
+                        inputs_dict[modality_name].append(ego_dict[f'image_inputs_{modality_name}']) 
 
                 if self.sensor_type_dict[modality_name] == "lidar":
-                    processed_lidar_torch_dict = eval(f"self.pre_processor_{modality_name}").collate_batch(eval(f"inputs_list_{modality_name}"))
+                    processed_lidar_torch_dict = eval(f"self.pre_processor_{modality_name}").collate_batch(inputs_dict[modality_name])
                     output_dict['ego'].update({f'inputs_{modality_name}': processed_lidar_torch_dict})
                 elif self.sensor_type_dict[modality_name] == "camera":
-                    merged_image_inputs_dict = merge_features_to_dict(eval(f"inputs_list_{modality_name}"), merge='stack')
+                    merged_image_inputs_dict = merge_features_to_dict(inputs_dict[modality_name], merge='stack')
                     output_dict['ego'].update({f'inputs_{modality_name}': merged_image_inputs_dict})
 
             return output_dict

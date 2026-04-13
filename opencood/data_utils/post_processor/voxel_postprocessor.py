@@ -672,9 +672,18 @@ class VoxelPostprocessor(BasePostprocessor):
         neg_equal_one = []
         targets = []
         for i in range(len(label_batch_list)):
-            pos_equal_one.append(label_batch_list[i]["pos_equal_one"].clone().detach())
-            neg_equal_one.append(label_batch_list[i]["neg_equal_one"].clone().detach())
-            targets.append(label_batch_list[i]["targets"].clone().detach())
+            pos = label_batch_list[i]["pos_equal_one"]
+            neg = label_batch_list[i]["neg_equal_one"]
+            targ = label_batch_list[i]["targets"]
+            if isinstance(pos, np.ndarray):
+                pos = torch.from_numpy(pos)
+            pos_equal_one.append(pos.clone().detach())
+            if isinstance(neg, np.ndarray):
+                neg = torch.from_numpy(neg)
+            neg_equal_one.append(neg.clone().detach())
+            if isinstance(targ, np.ndarray):
+                targ = torch.from_numpy(targ)
+            targets.append(targ.clone().detach())
         # import pdb; pdb.set_trace()
         # print(pos_equal_one)
         # import pdb; pdb.set_trace()

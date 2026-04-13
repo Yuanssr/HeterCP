@@ -253,10 +253,35 @@ def main():
                     criterion.logging(epoch, i, len(train_loader), writer, suffix="_single", iter=iter)
 
             if not opt.half:
-                if final_loss.requires_grad:
-                    final_loss.backward()
+                # Anti-Deadlock sync for DDP:
+                # Synchronize requires_grad across all ranks. If ANY rank produced a detached loss,
+                # we skip the backward pass on ALL ranks to prevent DDP deadlock or hook errors.
+                local_requires_grad = final_loss.requires_grad
+                if opt.distributed:
+                    rg_tensor = torch.tensor([int(local_requires_grad)], device=device)
+                    dist.all_reduce(rg_tensor, op=dist.ReduceOp.MIN)
+                    global_requires_grad = bool(rg_tensor.item())
+                else:
+                    global_requires_grad = local_requires_grad
+
+                if not global_requires_grad:
+                    continue
+                
+                final_loss.backward()
                 optimizer.step()
             else:
+                # Anti-Deadlock sync for DDP in AMP:
+                local_requires_grad = final_loss.requires_grad
+                if opt.distributed:
+                    rg_tensor = torch.tensor([int(local_requires_grad)], device=device)
+                    dist.all_reduce(rg_tensor, op=dist.ReduceOp.MIN)
+                    global_requires_grad = bool(rg_tensor.item())
+                else:
+                    global_requires_grad = local_requires_grad
+
+                if not global_requires_grad:
+                    continue
+
                 scaler.scale(final_loss).backward()
                 scaler.step(optimizer)
                 scaler.update()

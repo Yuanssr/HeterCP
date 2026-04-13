@@ -137,12 +137,7 @@ def getLateintermediateheterFusionDataset(cls):
             assert len(ego_lidar_pose) > 0
 
             
-            input_list_m1 = [] # can contain lidar or camera
-            input_list_m2 = []
-            input_list_m3 = []
-            input_list_m4 = []
-            input_list_m5 = []
-
+            input_dict = {m: [] for m in self.modality_name_list}
             agent_modality_list = []
             object_stack = []
             object_id_stack = []
@@ -157,11 +152,7 @@ def getLateintermediateheterFusionDataset(cls):
 
             if self.visualize or self.kd_flag:
                 projected_lidar_stack = []
-                input_list_m1_proj = [] # 2023.8.31 to correct discretization errors with kd flag
-                input_list_m2_proj = []
-                input_list_m3_proj = []
-                input_list_m4_proj = []
-                input_list_m5_proj = []
+                input_proj_dict = {m: [] for m in self.modality_name_list}
             # loop over all CAVs to process information
             for cav_id, selected_cav_base in base_data_dict.items():
                 # check if the cav is within the communication range with ego
@@ -233,12 +224,12 @@ def getLateintermediateheterFusionDataset(cls):
 
 
                 if sensor_type == "lidar":
-                    eval(f"input_list_{modality_name}").append(selected_cav_processed[f"processed_features_{modality_name}"])
+                    input_dict[modality_name].append(selected_cav_processed[f"processed_features_{modality_name}"])
                 elif sensor_type == "camera":
-                    eval(f"input_list_{modality_name}").append(selected_cav_processed[f"image_inputs_{modality_name}"])
+                    input_dict[modality_name].append(selected_cav_processed[f"image_inputs_{modality_name}"])
                 elif sensor_type == "lidar_camera":
-                    eval(f"input_list_{modality_name}").append(selected_cav_processed[f"processed_features_{modality_name}"])
-                    eval(f"input_list_{modality_name}").append(selected_cav_processed[f"image_inputs_{modality_name}"])
+                    input_dict[modality_name].append(selected_cav_processed[f"processed_features_{modality_name}"])
+                    input_dict[modality_name].append(selected_cav_processed[f"image_inputs_{modality_name}"])
                 else:
                     raise
                 
@@ -249,9 +240,9 @@ def getLateintermediateheterFusionDataset(cls):
                     projected_lidar_stack.append(
                         selected_cav_processed['projected_lidar'])
                     if sensor_type == "lidar" and self.kd_flag:
-                        eval(f"input_list_{modality_name}_proj").append(selected_cav_processed[f"processed_features_{modality_name}_proj"])
+                        input_proj_dict[modality_name].append(selected_cav_processed[f"processed_features_{modality_name}_proj"])
                     if sensor_type == "lidar_camera" and self.kd_flag:
-                        eval(f"input_list_{modality_name}_proj").append(selected_cav_processed[f"processed_features_{modality_name}_proj"])    
+                        input_proj_dict[modality_name].append(selected_cav_processed[f"processed_features_{modality_name}_proj"])    
                 
                 if self.supervise_single or self.heterogeneous:
                     single_label_list.append(selected_cav_processed['single_label_dict'])
@@ -324,13 +315,13 @@ def getLateintermediateheterFusionDataset(cls):
             
             for modality_name in self.modality_name_list:
                 if self.sensor_type_dict[modality_name] == "lidar":
-                    merged_feature_dict = merge_features_to_dict(eval(f"input_list_{modality_name}")) 
+                    merged_feature_dict = merge_features_to_dict(input_dict[modality_name]) 
                     processed_data_dict['ego'].update({f'input_{modality_name}': merged_feature_dict}) # maybe None
                 elif self.sensor_type_dict[modality_name] == "camera":
-                    merged_image_inputs_dict = merge_features_to_dict(eval(f"input_list_{modality_name}"), merge='stack')
+                    merged_image_inputs_dict = merge_features_to_dict(input_dict[modality_name], merge='stack')
                     processed_data_dict['ego'].update({f'input_{modality_name}': merged_image_inputs_dict}) # maybe None
                 elif self.sensor_type_dict[modality_name] == "lidar_camera":
-                    merged_feature_dict = merge_features_to_dict(eval(f"input_list_{modality_name}"), merge='stack') 
+                    merged_feature_dict = merge_features_to_dict(input_dict[modality_name], merge='stack') 
                     processed_data_dict['ego'].update({f'input_{modality_name}': merged_feature_dict}) # maybe None
             if self.kd_flag:
                 # heterogenous setting do not support DiscoNet's kd
@@ -341,7 +332,7 @@ def getLateintermediateheterFusionDataset(cls):
                 # stack_feature_processed = self.pre_processor.preprocess(stack_lidar_np)
                 for modality_name in self.modality_name_list:
                     processed_data_dict['ego'].update({
-                        f'input_{modality_name}_proj': merge_features_to_dict(eval(f"input_list_{modality_name}_proj")) # maybe None
+                        f'input_{modality_name}_proj': merge_features_to_dict(input_proj_dict[modality_name]) # maybe None
                         })
 
 
@@ -587,17 +578,8 @@ def getLateintermediateheterFusionDataset(cls):
             object_bbx_center = []
             object_bbx_mask = []
             object_ids = []
-            inputs_list_m1 = [] 
-            inputs_list_m2 = []
-            inputs_list_m3 = []
-            inputs_list_m4 = []
-            inputs_list_m5 = []
-
-            inputs_list_m1_proj = [] 
-            inputs_list_m2_proj = []
-            inputs_list_m3_proj = []
-            inputs_list_m4_proj = []
-            inputs_list_m5_proj = []
+            inputs_dict = {m: [] for m in self.modality_name_list}
+            inputs_proj_dict = {m: [] for m in self.modality_name_list}
             agent_modality_list = []
             # used to record different scenario
             record_len = []
@@ -634,7 +616,7 @@ def getLateintermediateheterFusionDataset(cls):
 
                 for modality_name in self.modality_name_list:
                     if ego_dict[f'input_{modality_name}'] is not None:
-                        eval(f"inputs_list_{modality_name}").append(ego_dict[f'input_{modality_name}']) # OrderedDict() if empty?
+                        inputs_dict[modality_name].append(ego_dict[f'input_{modality_name}']) # OrderedDict() if empty?
 
                 agent_modality_list.extend(ego_dict['agent_modality_list'])
                 
@@ -672,7 +654,7 @@ def getLateintermediateheterFusionDataset(cls):
                     # teacher_processed_lidar_list.append(ego_dict['teacher_processed_lidar'])
                     for modality_name in self.modality_name_list:
                         if ego_dict[f'input_{modality_name}_proj'] is not None:
-                            eval(f"inputs_list_{modality_name}_proj").append(ego_dict[f"input_{modality_name}_proj"])
+                            inputs_proj_dict[modality_name].append(ego_dict[f"input_{modality_name}_proj"])
 
                 ### 2022.10.10 single gt ####
                 if self.supervise_single or self.heterogeneous:
@@ -690,17 +672,17 @@ def getLateintermediateheterFusionDataset(cls):
 
             # 2023.2.5
             for modality_name in self.modality_name_list:
-                if len(eval(f"inputs_list_{modality_name}")) != 0:
+                if len(inputs_dict[modality_name]) != 0:
                     if self.sensor_type_dict[modality_name] == "lidar":
-                        merged_feature_dict = merge_features_to_dict(eval(f"inputs_list_{modality_name}"))
+                        merged_feature_dict = merge_features_to_dict(inputs_dict[modality_name])
                         processed_lidar_torch_dict = eval(f"self.pre_processor_{modality_name}").collate_batch(merged_feature_dict)
                         output_dict['ego'].update({f'inputs_{modality_name}': processed_lidar_torch_dict})
 
                     elif self.sensor_type_dict[modality_name] == "camera":
-                        merged_image_inputs_dict = merge_features_to_dict(eval(f"inputs_list_{modality_name}"), merge='cat')
+                        merged_image_inputs_dict = merge_features_to_dict(inputs_dict[modality_name], merge='cat')
                         output_dict['ego'].update({f'inputs_{modality_name}': merged_image_inputs_dict})
                     elif self.sensor_type_dict[modality_name] == "lidar_camera":
-                        merged_feature_dict = merge_features_to_dict(eval(f"inputs_list_{modality_name}"), merge='cat') 
+                        merged_feature_dict = merge_features_to_dict(inputs_dict[modality_name], merge='cat') 
                         output_dict['ego'].update({f'inputs_{modality_name}': merged_feature_dict}) # maybe None
 
             output_dict['ego'].update({"agent_modality_list": agent_modality_list})
@@ -753,8 +735,8 @@ def getLateintermediateheterFusionDataset(cls):
                 #     self.pre_processor.collate_batch(teacher_processed_lidar_list)
                 # output_dict['ego'].update({'teacher_processed_lidar':teacher_processed_lidar_torch_dict})
                 for modality_name in self.modality_name_list:
-                    if len(eval(f"inputs_list_{modality_name}_proj")) != 0 and self.sensor_type_dict[modality_name] == "lidar":
-                        merged_feature_proj_dict = merge_features_to_dict(eval(f"inputs_list_{modality_name}_proj"))
+                    if len(inputs_proj_dict[modality_name]) != 0 and self.sensor_type_dict[modality_name] == "lidar":
+                        merged_feature_proj_dict = merge_features_to_dict(inputs_proj_dict[modality_name])
                         processed_lidar_torch_proj_dict = eval(f"self.pre_processor_{modality_name}").collate_batch(merged_feature_proj_dict)
                         output_dict['ego'].update({f'inputs_{modality_name}_proj': processed_lidar_torch_proj_dict})
 
