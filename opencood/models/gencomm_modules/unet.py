@@ -215,7 +215,10 @@ class DiffusionUNet(nn.Module):
         self.num_resolutions = len(ch_mult)
         self.num_res_blocks = num_res_blocks
         self.resolution = resolution
-        in_channels = config.model.in_channels
+        if hasattr(config.model, 'embed_dim'):
+            in_channels = config.model.embed_dim
+        else:
+            in_channels = config.model.in_channels
         self.in_channels = in_channels
 
         # timestep embedding

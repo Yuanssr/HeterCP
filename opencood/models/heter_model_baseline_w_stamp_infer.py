@@ -100,7 +100,7 @@ class HeterModelBaselineWStampInfer(nn.Module):
         self.H = (self.cav_range[4] - self.cav_range[1])
         self.W = (self.cav_range[3] - self.cav_range[0])
         self.fake_voxel_size = 1
-
+        self.visualize_feature_flag = args["visualize_feature"]
         self.supervise_single = False
         if args.get("supervise_single", False):
             self.supervise_single = True
@@ -139,16 +139,16 @@ class HeterModelBaselineWStampInfer(nn.Module):
         """
         Shared Heads
         """
-        setattr(self, f"cls_head_{self.ego_modality}", nn.Conv2d(args['in_head'], args['anchor_number'] * self.num_class * self.num_class,
+        setattr(self, f"cls_head", nn.Conv2d(args['in_head'], args['anchor_number'] * self.num_class * self.num_class,
                                   kernel_size=1))
-        setattr(self, f"reg_head_{self.ego_modality}", nn.Conv2d(args['in_head'], 7 * args['anchor_number'] * self.num_class,
+        setattr(self, f"reg_head", nn.Conv2d(args['in_head'], 7 * args['anchor_number'] * self.num_class,
                                   kernel_size=1))
-        setattr(self, f"dir_head_{self.ego_modality}", nn.Conv2d(args['in_head'], args['dir_args']['num_bins'] * args['anchor_number'],
+        setattr(self, f"dir_head", nn.Conv2d(args['in_head'], args['dir_args']['num_bins'] * args['anchor_number'],
                                   kernel_size=1)) # BIN_NUM = 2
         
-        self.fix_modules.append(f"cls_head_{self.ego_modality}")
-        self.fix_modules.append(f"reg_head_{self.ego_modality}")
-        self.fix_modules.append(f"dir_head_{self.ego_modality}")
+        self.fix_modules.append(f"cls_head")
+        self.fix_modules.append(f"reg_head")
+        self.fix_modules.append(f"dir_head")
         
         # self.cls_head = nn.Conv2d(args['in_head'], args['anchor_number'],
         #                           kernel_size=1)
@@ -274,10 +274,12 @@ class HeterModelBaselineWStampInfer(nn.Module):
 
         if self.shrink_flag:
             fused_feature = self.shrink_conv(fused_feature)
-
-        cls_preds = eval(f"self.cls_head_{self.ego_modality}")(fused_feature)
-        reg_preds = eval(f"self.reg_head_{self.ego_modality}")(fused_feature)
-        dir_preds = eval(f"self.dir_head_{self.ego_modality}")(fused_feature)
+        if self.visualize_feature_flag:
+                            output_dict['heter_feature'] = heter_feature_2d
+                            output_dict['fused_feature'] = fused_feature
+        cls_preds = eval(f"self.cls_head")(fused_feature)
+        reg_preds = eval(f"self.reg_head")(fused_feature)
+        dir_preds = eval(f"self.dir_head")(fused_feature)
 
         output_dict.update({'cls_preds': cls_preds,
                             'reg_preds': reg_preds,

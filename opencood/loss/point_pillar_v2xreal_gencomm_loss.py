@@ -7,7 +7,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-import swanlab as wandb
 
 class WeightedSmoothL1Loss(nn.Module):
     """
@@ -267,8 +266,5 @@ class PointPillarV2XRealGenCommLoss(nn.Module):
                           epoch*batch_len + batch_id)
         writer.add_scalar('Confidence_loss', conf_loss.item(),
                           epoch*batch_len + batch_id)
-        wandb.log({ 'Loss': total_loss,
-                    'Reg_loss': reg_loss,
-                    'Conf_loss': conf_loss,
-                    'Gen_loss': gen_loss}, step=iter)
+
 

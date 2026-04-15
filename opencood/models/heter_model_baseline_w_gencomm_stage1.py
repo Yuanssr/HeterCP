@@ -103,6 +103,7 @@ class HeterModelBaselineWGenCommStage1(nn.Module):
             
         self.num_class = args['num_class'] if "num_class" in args else 1
         self.supervise_single = False
+        self.visualize_feature_flag = args["visualize_feature"]
         if args.get("supervise_single", False):
             self.supervise_single = True
             in_head_single = args['in_head_single']
@@ -283,7 +284,9 @@ class HeterModelBaselineWGenCommStage1(nn.Module):
 
         if self.shrink_flag:
             fused_feature = self.shrink_conv(fused_feature)
-
+        if self.visualize_feature_flag:
+            output_dict['heter_feature'] = heter_feature_2d
+            output_dict['fused_feature'] = fused_feature    
 
         cls_preds = self.cls_head(fused_feature)
         reg_preds = self.reg_head(fused_feature)

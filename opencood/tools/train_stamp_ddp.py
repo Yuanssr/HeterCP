@@ -58,7 +58,7 @@ def main():
             sampler=sampler_val,
             num_workers=8,
             collate_fn=opencood_train_dataset.collate_batch_train,
-            drop_last=False,
+            drop_last=True,
         )
     else:
         train_loader = DataLoader(
@@ -83,7 +83,9 @@ def main():
     print("Creating Model")
     model = train_utils.create_model(hypes)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+    print('Top-level modules:')
+    for name, module in model.named_children():  # 只迭代顶层
+        print(f"- {name}: {module.__class__.__name__}")
     # record lowest validation loss checkpoint.
     lowest_val_loss = 1e5
     lowest_val_epoch = -1
@@ -124,7 +126,7 @@ def main():
 
     print("Training start")
     epoches = hypes["train_params"]["epoches"]
-
+    log_interval = hypes['train_params'].get("log_interval", 0)    
     for epoch in [0] if opt.flop_count else range(init_epoch, max(epoches, init_epoch)):
         if opt.distributed:
             sampler_train.set_epoch(epoch)
@@ -158,7 +160,7 @@ def main():
             if output_feat is not None:
                 FM, FP2M, FM2P2M, FP, FM2P = output_feat
                 loss_adapter = criterion_adapter(FM, FP2M, FM2P2M, FP, FM2P)
-                if dist.get_rank() == 0:
+                if log_interval>0 and dist.get_rank() == 0 and (i % log_interval == 0):
                     criterion_adapter.logging(epoch, i, len(train_loader), writer)
                 
             final_loss_dict = dict()
@@ -168,13 +170,13 @@ def main():
                         final_loss_dict[modality_name] = criterion_dict[modality_name](
                             output_dict[modality_name], batch_data["ego"]["label_dict_protocol"]
                         )
-                        if dist.get_rank() == 0:
+                        if log_interval>0 and dist.get_rank() == 0 and (i % log_interval == 0):
                             criterion_dict[modality_name].logging(epoch, i, len(train_loader), writer)
                     else:
                         final_loss_dict[modality_name] = criterion_dict[modality_name](
                             output_dict[modality_name], batch_data["ego"]["label_dict"]
                         )
-                        if dist.get_rank() == 0:
+                        if log_interval>0 and dist.get_rank() == 0 and (i % log_interval == 0):
                             criterion_dict[modality_name].logging(epoch, i, len(train_loader), writer)
             
             final_loss = sum(final_loss_dict.values()) + loss_adapter

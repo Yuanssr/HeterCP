@@ -252,6 +252,10 @@ def merge_and_save_final(aligned_model_dir_list, output_model_dir):
     output_model_path = os.path.join(output_model_dir, 'net_epoch1.pth')
     torch.save(final_dict, output_model_path)
     
+    # 打印所有权重里的所有键
+    print(f"Saved merged model to {output_model_path}. Keys:")
+    for key in final_dict.keys():
+        print(key)
 
 def merge_and_save_late_fusion(aligned_model_dir_list, output_model_dir):
     """

@@ -85,7 +85,7 @@ class HeterModelBaselineWStamp(nn.Module):
 
         self.model_train_init()
         # check again which module is not fixed.
-        # check_trainable_module(self)
+        check_trainable_module(self)
 
     def model_train_init(self):
         # if train adapter, then all modules are fixed except adapter and reverter
