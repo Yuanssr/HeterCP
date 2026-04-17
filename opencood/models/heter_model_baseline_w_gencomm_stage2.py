@@ -242,7 +242,6 @@ class HeterModelBaselineWGenCommStage2(nn.Module, DDPCheckMixin):
         # print(agent_modality_list)
 
         modality_count_dict = Counter(agent_modality_list)
-        print(modality_count_dict)
         modality_feature_dict = {}
         modality_message_dict = {}
 

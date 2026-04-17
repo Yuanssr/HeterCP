@@ -141,7 +141,7 @@ def main():
     infer_info = opt.fusion_method + opt.note
 
 
-    for i, batch_data in enumerate(tqdm(data_loader, desc=infer_info, unit="batch")):
+    for i, batch_data in enumerate(tqdm(data_loader, desc=infer_info, unit="batch", ascii=True)):
         if batch_data is None:
             continue
         with torch.no_grad():

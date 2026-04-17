@@ -13,6 +13,7 @@ import torch
 import open3d as o3d
 from torch.utils.data import DataLoader, Subset
 import numpy as np
+from tqdm import tqdm
 import opencood.hypes_yaml.yaml_utils as yaml_utils
 from opencood.tools import train_utils, inference_utils_v2xreal
 from opencood.data_utils.datasets import build_dataset
@@ -141,7 +142,7 @@ def main():
             result_stat[class_name][iou_threshold] = \
             {'tp': [], 'fp': [], 'gt': 0, 'score': []}
             
-    for i, batch_data in enumerate(data_loader):
+    for i, batch_data in enumerate(tqdm(data_loader, desc=infer_info, unit="batch", ascii=True)):
         print(f"{infer_info}_{i}")
         if batch_data is None:
             continue

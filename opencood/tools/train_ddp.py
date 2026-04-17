@@ -4,6 +4,7 @@ import statistics
 import glob
 import torch
 from datetime import datetime
+from tqdm import tqdm
 from torch.utils.data import DataLoader, DistributedSampler, Subset
 import torch.distributed as dist
 from tensorboardX import SummaryWriter
