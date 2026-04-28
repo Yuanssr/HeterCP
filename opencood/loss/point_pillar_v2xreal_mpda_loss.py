@@ -7,7 +7,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-import swanlab as wandb
 
 class WeightedSmoothL1Loss(nn.Module):
     """
@@ -286,8 +285,27 @@ class PointPillarV2XRealMpdaLoss(nn.Module):
                           epoch*batch_len + batch_id)
         writer.add_scalar('Confidence_loss', conf_loss.item(),
                           epoch*batch_len + batch_id)
-        wandb.log({ 'Loss': total_loss,
-                    'Reg_loss': reg_loss,
-                    'Conf_loss': conf_loss,
-                    'Da_loss': da_loss}, step=iter)
 
+    def return_index(self, record_len):
+        index = []
+        cum_sum_len = list(np.cumsum(self.torch_tensor_to_numpy(record_len)))
+        index.append(0)
+
+        for i in range(len(cum_sum_len)-1):
+            index.append(cum_sum_len[i])
+
+        return index
+    def torch_tensor_to_numpy(self,torch_tensor):
+        """
+        Convert a torch tensor to numpy.
+
+        Parameters
+        ----------
+        torch_tensor : torch.Tensor
+
+        Returns
+        -------
+        A numpy array.
+        """
+        return torch_tensor.numpy() if not torch_tensor.is_cuda else \
+            torch_tensor.cpu().detach().numpy()

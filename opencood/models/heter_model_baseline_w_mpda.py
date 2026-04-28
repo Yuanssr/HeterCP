@@ -45,7 +45,7 @@ class HeterModelBaselineWMPDA(nn.Module):
         self.ego_modality = args['ego_modality']
         self.cav_range = args['lidar_range']
         self.sensor_type_dict = OrderedDict()
-        self.fix_modules = []
+        self.fix_modules = ['fusion_net', 'cls_head', 'reg_head', 'dir_head']
         # setup each modality model
         for modality_name in self.modality_name_list:
             model_setting = args[modality_name]

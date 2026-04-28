@@ -143,7 +143,6 @@ def main():
             {'tp': [], 'fp': [], 'gt': 0, 'score': []}
             
     for i, batch_data in enumerate(tqdm(data_loader, desc=infer_info, unit="batch", ascii=True)):
-        print(f"{infer_info}_{i}")
         if batch_data is None:
             continue
         with torch.no_grad():

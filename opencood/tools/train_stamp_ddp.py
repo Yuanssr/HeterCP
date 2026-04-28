@@ -30,6 +30,29 @@ def strip_module_prefix(state_dict):
     return {k.replace("module.", "", 1) if k.startswith("module.") else k: v
             for k, v in state_dict.items()}
 
+def _count_params(module, trainable_only=False):
+    if trainable_only:
+        return sum(p.numel() for p in module.parameters() if p.requires_grad)
+    return sum(p.numel() for p in module.parameters())
+
+
+def _print_trainable_param_stats(model):
+    print('Top-level modules:')
+    for name, module in model.named_children():
+        trainable_params = _count_params(module, trainable_only=True)
+        total_params = _count_params(module, trainable_only=False)
+        print(
+            f"- {name}: {module.__class__.__name__} | "
+            f"trainable={trainable_params:,} / total={total_params:,}"
+        )
+
+    total_trainable = _count_params(model, trainable_only=True)
+    total_params = _count_params(model, trainable_only=False)
+    print(
+        f"Trainable params (all modules): {total_trainable:,} "
+        f"({total_trainable / 1e6:.3f} M) / Total params: {total_params:,}"
+    )
+
 def main():
     opt = train_parser()
     hypes = yaml_utils.load_yaml(opt.hypes_yaml, opt)
@@ -82,10 +105,9 @@ def main():
 
     print("Creating Model")
     model = train_utils.create_model(hypes)
+    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print('Top-level modules:')
-    for name, module in model.named_children():  # 只迭代顶层
-        print(f"- {name}: {module.__class__.__name__}")
+    _print_trainable_param_stats(model)
     # record lowest validation loss checkpoint.
     lowest_val_loss = 1e5
     lowest_val_epoch = -1
@@ -202,6 +224,7 @@ def main():
         if epoch % hypes["train_params"]["eval_freq"] == 0:
             valid_ave_loss = []
 
+            model.eval()
             with torch.no_grad():
                 for i, batch_data in enumerate(val_loader):
                     is_valid = batch_data is not None
@@ -212,14 +235,10 @@ def main():
                     if not is_valid:
                         continue
 
-                    model.zero_grad()
-                    optimizer.zero_grad()
-                    model.eval()
-
                     batch_data = train_utils.to_device(batch_data, device)
                     batch_data["ego"]["epoch"] = epoch
                     
-                    output_dict, output_feat = model_without_ddp(batch_data["ego"])
+                    output_dict, output_feat = model(batch_data["ego"])
                     loss_adapter = 0
                     if output_feat is not None:
                         FM, FP2M, FM2P2M, FP, FM2P = output_feat
@@ -237,7 +256,8 @@ def main():
                                     output_dict[modality_name], batch_data["ego"]["label_dict"]
                                 )
                     final_loss = sum(final_loss_dict.values()) + loss_adapter
-                    valid_ave_loss.append(final_loss.item())
+                    if not torch.isnan(final_loss) and not torch.isinf(final_loss):
+                        valid_ave_loss.append(final_loss.item())
 
             local_loss = statistics.mean(valid_ave_loss) if len(valid_ave_loss) > 0 else 0
             if opt.distributed:

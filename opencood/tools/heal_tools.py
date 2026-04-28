@@ -272,6 +272,8 @@ def merge_and_save_late_fusion(aligned_model_dir_list, output_model_dir):
         final_dict = merge_dict_late_fusion(final_dict, model_dict["model"])
 
     output_model_path = os.path.join(output_model_dir, 'net_epoch1.pth')
+    if not os.path.exists(output_model_dir):
+        os.makedirs(output_model_dir)
     torch.save(final_dict, output_model_path)
 
 def add_suffix_to_keys(model_dict, suffix):
@@ -319,6 +321,94 @@ def change_modality_key_name(log_path,):
     return model_dict
 
 
+def convert_to_moe_keys(model_dict, modality_tag):
+    """
+    针对 MoE：将 FFN/LN2 的字典键转换为匹配 ModuleDict 的形式，便于后续按模态加载。
+    例如： ...layers.0.1.fn.net.0.weight -> ...layers.0.1.fn.m1.net.0.weight
+    """
+    new_dict = OrderedDict()
+    # 修复正则：绑定 encoder 关键字，严格限制匹配外层 V2XTEncoder 的 layers.X.1
+    # 避免误伤 V2XFusionBlock 内部的 layers.0.1 导致 Attention 权重被撕裂
+    pattern_expert = re.compile(r"^(.*?encoder\.layers\.\d+\.1\.(?:norm|fn))(.*)")
+    for key, value in model_dict.items():
+        match = pattern_expert.search(key)
+        if match:
+            new_key = f"{match.group(1)}.{modality_tag}{match.group(2)}"
+            new_dict[new_key] = value
+        else:
+            new_dict[key] = value
+    return new_dict
+
+
+def merge_dict_moe(base_dict, other_dict, modality_tag):
+    """
+    对于非 MoE 且不重合的键直接加入，遇到命名相同但参数不同的键（如 Encoder 或 Head），
+    像代码中已有设定那样强行打上该模态的后缀标识，以防止在融合时被直接遗弃掉。
+    """
+    merged_dict = OrderedDict(base_dict)
+    for key, value in other_dict.items():
+        if key not in merged_dict:
+            merged_dict[key] = value
+        else:
+            if torch.equal(merged_dict[key], value):
+                continue
+            else:
+                # 修复冲突逻辑：符合 Ego-Centric Attention 构想
+                # 遇到冲突的 fusion_net 结构（即 Attention 和 Norm1相关），强行丢弃非 Ego 的！
+                if key.startswith("fusion_net"):
+                    continue
+                
+                # 若名字存在且参数不相同，给最外层的模块名尾部加后缀（如：backbone_m1... 或 cls_head_m1...）
+                parts = key.split('.')
+                parts[0] = f"{parts[0]}_{modality_tag}"
+                new_key = ".".join(parts)
+                merged_dict[new_key] = value
+    return merged_dict
+
+
+def merge_and_save_moe(aligned_model_dir_list, output_model_dir):
+    final_dict = OrderedDict()
+    
+    # 解析路径拿到例如 m1, m2 等标签的名字
+    def get_modality(path):
+        res = re.search(r"_(m\d+)_?", path)
+        if res:
+            return res.group(1)
+        res2 = re.search(r"(m\d+)", path)
+        if res2:
+            return res2.group(1)
+        return "unk"
+
+    # Ego (主) 模型一般为传入列表的最后一个
+    base_dir = aligned_model_dir_list[-1]
+    base_modality = get_modality(base_dir)
+    base_path = get_model_path_from_dir(base_dir)
+    base_dict = torch.load(base_path, map_location='cpu')
+    if "model" in base_dict:
+        base_dict = base_dict["model"]
+        
+    final_dict = convert_to_moe_keys(base_dict, base_modality)
+
+    # 合并其他阶段的模型
+    for aligned_model_dir in aligned_model_dir_list[:-1]:
+        modality = get_modality(aligned_model_dir)
+        aligned_model_path = get_model_path_from_dir(aligned_model_dir)
+        model_dict = torch.load(aligned_model_path, map_location='cpu')
+        if "model" in model_dict:
+            model_dict = model_dict["model"]
+            
+        model_dict_moe = convert_to_moe_keys(model_dict, modality)
+        final_dict = merge_dict_moe(final_dict, model_dict_moe, modality)
+
+    output_model_path = os.path.join(output_model_dir, 'net_epoch1.pth')
+    if not os.path.exists(output_model_dir):
+        os.makedirs(output_model_dir)
+    torch.save(final_dict, output_model_path)
+    
+    print(f"Saved MOE merged model to {output_model_path}. Total keys: {len(final_dict)}")
+    for key in final_dict.keys():
+        print(key)
+
 if __name__ == "__main__":
     func = sys.argv[1]
     if func == 'rename_to_new_version':
@@ -341,6 +431,8 @@ if __name__ == "__main__":
         merge_and_save_final(sys.argv[2:-1], sys.argv[-1])
     elif func == 'merge_and_save_late_fusion': 
         merge_and_save_late_fusion(sys.argv[2:-1], sys.argv[-1])
+    elif func == 'merge_and_save_moe':
+        merge_and_save_moe(sys.argv[2:-1], sys.argv[-1])
     else:
         raise "This function not implemented"
     

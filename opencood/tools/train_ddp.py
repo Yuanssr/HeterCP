@@ -42,14 +42,30 @@ def train_parser():
     opt = parser.parse_args()
     return opt
 
-"""
-def init_wandb(hypes, current_time):
-    if dist.get_rank() == 0:
 
-        run_name = hypes['name'] + current_time.strftime("_%Y_%m_%d_%H_%M_%S")
-        wandb.init(project="GenComm", name=run_name, config=hypes)
-"""
-        
+def _count_params(module, trainable_only=False):
+    if trainable_only:
+        return sum(p.numel() for p in module.parameters() if p.requires_grad)
+    return sum(p.numel() for p in module.parameters())
+
+
+def _print_trainable_param_stats(model):
+    print('Top-level modules:')
+    for name, module in model.named_children():
+        trainable_params = _count_params(module, trainable_only=True)
+        total_params = _count_params(module, trainable_only=False)
+        print(
+            f"- {name}: {module.__class__.__name__} | "
+            f"trainable={trainable_params:,} / total={total_params:,}"
+        )
+
+    total_trainable = _count_params(model, trainable_only=True)
+    total_params = _count_params(model, trainable_only=False)
+    print(
+        f"Trainable params (all modules): {total_trainable:,} "
+        f"({total_trainable / 1e6:.3f} M) / Total params: {total_params:,}"
+    )
+
 
 def main():
     opt = train_parser()
@@ -136,10 +152,8 @@ def main():
     print('Creating Model')
     model = train_utils.create_model(hypes)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    
-    print('Top-level modules:')
-    for name, module in model.named_children():  # 只迭代顶层
-        print(f"- {name}: {module.__class__.__name__}")
+
+    _print_trainable_param_stats(model)
     # record lowest validation loss checkpoint.
     lowest_val_loss = 1e5
     lowest_val_epoch = -1
