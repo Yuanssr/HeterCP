@@ -118,17 +118,18 @@ def visualize(infer_result, pcd, pc_range, save_path, method='3d', left_hand=Fal
             cav_box_np = infer_result.get("cav_box_np", None)
             if agent_modality_list is not None:
                 cav_box_np = copy.deepcopy(cav_box_np)
+                color_map = {
+                    "m1": (0, 114, 178),    # 深蓝
+                    "m2": (213, 94, 0),     # 朱红
+                    "m3": (0, 158, 115),    # 蓝绿
+                    "m4": (204, 121, 167),  # 紫红
+                    "m5": (230, 159, 0),    # 橘黄
+                    "m6": (86, 180, 233),   # 天蓝
+                    "m7": (200, 200, 50),   # 暗黄 (避免纯黄在白底看不清)
+                    "m8": (178, 34, 34),    # 砖红
+                }
                 for i, modality_name in enumerate(agent_modality_list):
-                    if modality_name == "m1":
-                        color = (0,191,255)
-                    elif modality_name == "m2":
-                        color = (255,185,15)
-                    elif modality_name == "m3":
-                        color = (138,211,222)
-                    elif modality_name == 'm4':
-                        color = (32, 60, 160)
-                    else:
-                        color = (66,66,66)
+                    color = color_map.get(modality_name, (128, 128, 128)) # 未知模态默认灰色
 
                     render_dict = {'m1': 'L-P', 'm2':"C-E", 'm3':'L-S', 'm4':'C-R'}
                     canvas.draw_boxes(cav_box_np[i:i+1], colors=color, texts=[modality_name])
@@ -150,15 +151,18 @@ def visualize(infer_result, pcd, pc_range, save_path, method='3d', left_hand=Fal
             cav_box_np = infer_result.get("cav_box_np", None)
             if agent_modality_list is not None:
                 cav_box_np = copy.deepcopy(cav_box_np)
+                color_map = {
+                    "m1": (0, 114, 178),    # 深蓝
+                    "m2": (213, 94, 0),     # 朱红
+                    "m3": (0, 158, 115),    # 蓝绿
+                    "m4": (204, 121, 167),  # 紫红
+                    "m5": (230, 159, 0),    # 橘黄
+                    "m6": (86, 180, 233),   # 天蓝
+                    "m7": (200, 200, 50),   # 暗黄
+                    "m8": (178, 34, 34),    # 砖红
+                }
                 for i, modality_name in enumerate(agent_modality_list):
-                    if modality_name == "m1":
-                        color = (0,191,255)
-                    elif modality_name == "m2":
-                        color = (255,185,15)
-                    elif modality_name == "m3":
-                        color = (123,0,70)
-                    else:
-                        color = (66,66,66)
+                    color = color_map.get(modality_name, (128, 128, 128)) # 未知模态默认灰色
                     canvas.draw_boxes(cav_box_np[i:i+1], colors=color, texts=[modality_name])
 
         else:
